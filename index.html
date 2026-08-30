@@ -111,6 +111,11 @@
     white-space:nowrap;border:none;cursor:pointer}
   .buy-btn:active{opacity:.8}
   .buy-btn.soon{background:#e8f1ec;color:#8aa595;cursor:default}
+  .set-buy{display:block;text-align:center;padding:15px;border-radius:12px;
+    background:var(--leaf);color:#fff;font-size:16px;font-weight:800;
+    text-decoration:none;margin-bottom:12px;box-shadow:0 2px 8px rgba(31,92,61,.25)}
+  .set-buy:active{opacity:.85}
+  .set-buy.soon{background:#e8f1ec;color:#8aa595;box-shadow:none;cursor:default}
   .parts-box{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .parts-note{font-size:11px;color:#8aa595;margin-top:8px;padding:0 4px}
   /* 프리셋 */
@@ -460,8 +465,14 @@ function renderPresetParts(pr, activeHose){
   const el=document.getElementById('parts');
   const titleHose=document.getElementById('partsHose');
   titleHose.innerHTML='· '+pr.label+' <span style="color:var(--leaf);font-size:11px">(표준 구성)</span>';
+
+  // 세트 완제품 구매 버튼 (프리셋 그대로일 때만)
+  const soon=SET_SOON.indexOf(activePreset)>=0;
+  const setBtn=soon
+    ? `<div class="set-buy soon">${pr.label} · 준비중</div>`
+    : `<a class="set-buy" href="${SET_URL}" target="_blank" rel="noopener">🛒 ${pr.label} 바로 구매하기</a>`;
+
   let rowsHTML=pr.parts.map(p=>partRowHTML(p[0], p[1], p[2], pr.hose)).join('');
-  // 호스 행
   const hoseName=pr.hose+' 호스';
   const hoseUrl=partURL(hoseName, pr.hose);
   rowsHTML+=`<div class="part-row">
@@ -469,8 +480,8 @@ function renderPresetParts(pr, activeHose){
     <span class="part-right"><span class="part-qty">${pr.hoseLen}<span class="u">m</span></span>${
       hoseUrl?`<a class="buy-btn" href="${hoseUrl}" target="_blank" rel="noopener">구매</a>`:'<span class="buy-btn soon">준비중</span>'
     }</span></div>`;
-  el.innerHTML='<div class="parts-box">'+rowsHTML+'</div>'+
-  `<div class="parts-note">표준 세트 구성입니다. 값을 직접 바꾸면 맞춤 계산으로 전환됩니다</div>`;
+  el.innerHTML=setBtn+'<div class="parts-box">'+rowsHTML+'</div>'+
+  `<div class="parts-note">${soon?'50미터 세트는 준비중입니다. 아래 부품은 개별 구매할 수 있어요':'세트로 한 번에 구매하거나, 아래에서 부품을 개별 구매할 수 있어요'}</div>`;
 }
 
 function pickHose(name){
@@ -504,6 +515,10 @@ const URLS={
   '엘자':            BASE+'12819031965',   // 6/8/10/12
   '테프론':          BASE+'5345242011',
 };
+
+// 표준 세트 완제품 구매 URL (프리셋 미변경 시)
+const SET_URL=BASE+'8340616971';   // 3/5/10/15/20/25미터 세트 (옵션 선택)
+const SET_SOON=['50'];             // 준비중인 세트 (프리셋 key)
 
 // 부품명 → URL 매핑 (호스 굵기 반영)
 function partURL(name, hose){
