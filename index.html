@@ -21,6 +21,21 @@
   .logo{font-size:13px;letter-spacing:3px;color:var(--leaf);font-weight:700;text-transform:uppercase}
   h1{font-size:22px;margin-top:6px;color:var(--ink);font-weight:800}
   .sub{font-size:13px;color:var(--leaf);margin-top:4px}
+  /* 레이아웃 토글 */
+  .layout-toggle{display:inline-flex;margin-top:12px;border:1.5px solid var(--line);
+    border-radius:10px;overflow:hidden;background:#fff}
+  .lt-btn{padding:7px 16px;border:none;background:#fff;color:#6b8577;font-size:13px;
+    font-weight:700;cursor:pointer;font-family:inherit}
+  .lt-btn.on{background:var(--leaf);color:#fff}
+  #lowerGrid{margin-top:28px}
+  /* 가로형: 스크롤 없이 한 화면 (3단) */
+  .wrap.wide{max-width:96vw}
+  .wrap.wide #lowerGrid{display:grid;grid-template-columns:1fr 1.4fr 1.1fr;gap:16px;align-items:start;margin-top:28px}
+  .wrap.wide #lowerGrid>.card{margin-top:0}
+  .wrap.wide .set-buy{display:none}
+  .wrap.wide header{padding:10px 0 4px}
+  .wrap.wide .sub{display:none}
+  .wrap.wide .preset-grid{grid-template-columns:repeat(7,1fr)}  /* 프리셋 한 줄 */
   .card{
     background:var(--paper);border:1px solid var(--line);border-radius:16px;
     padding:20px;margin-top:16px;box-shadow:0 2px 12px rgba(20,60,40,.05);
@@ -152,6 +167,10 @@
     <div class="logo">블루달리아</div>
     <h1>쿨링포그 세트 계산기</h1>
     <div class="sub">길이·노즐 수·간격을 넣으면<br>맞는 호스와 분무 압력을 알려드려요</div>
+    <div class="layout-toggle">
+      <button class="lt-btn on" id="ltPortrait" onclick="setLayout('portrait')">세로형</button>
+      <button class="lt-btn" id="ltWide" onclick="setLayout('wide')">가로형</button>
+    </div>
   </header>
 
   <div class="card" style="padding:16px">
@@ -170,6 +189,7 @@
     <div id="presetBuy"></div>
   </div>
 
+  <div id="lowerGrid">
   <div class="card">
     <div class="field">
       <label>노즐 개수
@@ -222,7 +242,7 @@
     </div>
   </div>
 
-  <div class="card" style="padding:16px">
+  <div class="card" style="padding:16px" id="midCard">
     <div class="diagram" style="margin-bottom:0">
       <div class="dia-label" id="diaLabel">라인 구성</div>
       <div class="pipe">
@@ -251,22 +271,23 @@
         <div class="v" id="totLen">–<span class="u">m</span></div>
       </div>
     </div>
-  </div>
 
-  <div class="card result">
-    <div id="verdict" class="verdict ok">
+    <div id="verdict" class="verdict ok" style="margin-top:14px">
       <div class="big">계산 중…</div>
     </div>
 
     <div class="hose-title">호스별 끝단 압력 <span style="color:#8aa595;font-weight:500">· 눌러서 구성 변경</span></div>
     <div id="hoses"></div>
+  </div>
 
-    <div class="hose-title" id="partsTitle">필요 부품 <span id="partsHose" style="color:var(--ink)"></span></div>
+  <div class="card result">
+    <div class="hose-title" id="partsTitle" style="margin-top:0">필요 부품 <span id="partsHose" style="color:var(--ink)"></span></div>
     <div id="parts"></div>
 
     <div class="disclaimer" id="disc">
       <span id="discTxt">※ 계산값은 이론 기준(1.0mm 노즐, 입구 4kg/cm²)입니다.</span> 실제 설치 환경(수압·굽힘·이음새)에 따라 달라질 수 있으니, 큰 규모는 시제품 테스트를 권장합니다.
     </div>
+  </div>
   </div>
 
   <footer>
@@ -279,6 +300,15 @@
 const RHO=1000, MU=0.001, NF=240e-6/60;
 let inletKg=4.0;               // 입구 수압 (기본 4kg/cm²)
 let PIN=inletKg*98066.5;
+
+// 레이아웃 전환 (세로형/가로형)
+function setLayout(mode){
+  const wrap=document.querySelector('.wrap');
+  if(mode==='wide'){ wrap.classList.add('wide'); }
+  else { wrap.classList.remove('wide'); }
+  document.getElementById('ltPortrait').classList.toggle('on', mode!=='wide');
+  document.getElementById('ltWide').classList.toggle('on', mode==='wide');
+}
 const HOSES=[
   {name:'6mm', D:0.004},
   {name:'8mm', D:0.005},
@@ -685,6 +715,8 @@ document.getElementById('distSlider').addEventListener('input',e=>{
 document.getElementById('dist').addEventListener('input',()=>{exitPreset();calc();});
 document.getElementById('noz').addEventListener('input',()=>{exitPreset();calc();});
 selectPreset('10');   // 기본값: 10미터 세트 선택 상태로 시작
+// 최초 로드 시 화면 방향으로 레이아웃 자동 선택 (가로화면=가로형, 세로화면=세로형)
+setLayout(window.innerWidth >= window.innerHeight ? 'wide' : 'portrait');
 </script>
 </body>
 </html>
