@@ -36,7 +36,7 @@
   .wrap.wide .set-buy{display:none}
   .wrap.wide header{padding:6px 0 2px}
   .wrap.wide .sub{display:none}
-  .wrap.wide .preset-grid{grid-template-columns:repeat(7,1fr)}  /* 프리셋 한 줄 */
+  .wrap.wide .preset-grid{grid-template-columns:repeat(7,1fr);max-width:85%}  /* 프리셋 한 줄, 가로형은 넉넉히 */
   .wrap.wide .card{padding:2vh 20px}                            /* 카드 세로 여백 화면비례 */
   .wrap.wide .field{margin-bottom:2vh}
   .wrap.wide .slider{margin-top:1.6vh}
@@ -150,21 +150,24 @@
   .parts-box{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .parts-note{font-size:11px;color:#8aa595;margin-top:8px;padding:0 4px}
   /* 프리셋 */
-  .preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+    max-width:60%;margin:0 auto}                 /* 양옆 20% 여백, 가운데 정렬 */
   .preset{
-    padding:14px 4px;border:2px solid var(--line);background:#fff;
+    padding:14px 4px 12px;border:2px solid var(--line);background:#fff;
     border-radius:12px;font-size:16px;font-weight:800;color:var(--leaf);
     cursor:pointer;transition:all .12s;font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:0;
   }
-  .preset:active{transform:scale(.95)}
-  .preset.on{border-color:var(--leaf);background:var(--leaf);color:#fff}
-  .preset-buy{display:block;text-align:center;margin-top:12px;padding:15px;
-    border-radius:12px;background:var(--leaf);color:#fff;font-size:16px;
-    font-weight:800;text-decoration:none;box-shadow:0 2px 8px rgba(31,92,61,.25)}
-  .preset-buy:active{opacity:.85}
-  .preset-buy.soon{background:#e8f1ec;color:#8aa595;box-shadow:none;cursor:default}
-  .preset-buy.off{background:#eef2ef;color:#a9bcb0;box-shadow:none;cursor:not-allowed;
-    border:1.5px dashed #cdddd3}
+  .preset:active{transform:scale(.97)}
+  .preset.on{border-color:var(--leaf);background:#eaf6ef;color:var(--leaf)}  /* 호스추천처럼 연녹+진테두리 */
+  .p-label{line-height:1.2}
+  /* 프리셋 안 구매 버튼 (선택됐을 때만 표시, 부품 구매버튼처럼 진녹) */
+  .p-buy{display:none;margin-top:10px;padding:5px 14px;text-align:center;
+    background:var(--leaf);color:#fff;font-size:12px;font-weight:800;
+    border-radius:8px;text-decoration:none;cursor:pointer}
+  .preset.on .p-buy{display:block}
+  .p-buy.off{background:#e8f1ec;color:#a9bcb0;cursor:not-allowed}  /* 값 변경시 비활성 */
+  .p-buy.soon{background:#e8f1ec;color:#a9bcb0;cursor:default}
 </style>
 </head>
 <body>
@@ -184,15 +187,14 @@
       <span class="hint">누르면 아래 값이 자동으로 채워져요</span>
     </label>
     <div class="preset-grid" id="presetGrid">
-      <button class="preset" data-p="3">3m</button>
-      <button class="preset" data-p="5">5m</button>
-      <button class="preset" data-p="10">10m</button>
-      <button class="preset" data-p="15">15m</button>
-      <button class="preset" data-p="20">20m</button>
-      <button class="preset" data-p="25">25m</button>
-      <button class="preset" data-p="50">50m</button>
+      <div class="preset" data-p="3"><span class="p-label">3m</span><a class="p-buy" data-buy="3">구매</a></div>
+      <div class="preset" data-p="5"><span class="p-label">5m</span><a class="p-buy" data-buy="5">구매</a></div>
+      <div class="preset" data-p="10"><span class="p-label">10m</span><a class="p-buy" data-buy="10">구매</a></div>
+      <div class="preset" data-p="15"><span class="p-label">15m</span><a class="p-buy" data-buy="15">구매</a></div>
+      <div class="preset" data-p="20"><span class="p-label">20m</span><a class="p-buy" data-buy="20">구매</a></div>
+      <div class="preset" data-p="25"><span class="p-label">25m</span><a class="p-buy" data-buy="25">구매</a></div>
+      <div class="preset" data-p="50"><span class="p-label">50m</span><a class="p-buy" data-buy="50">구매</a></div>
     </div>
-    <div id="presetBuy"></div>
   </div>
 
   <div id="lowerGrid">
@@ -354,10 +356,20 @@ const PRESETS={
 };
 
 document.getElementById('presetGrid').addEventListener('click',e=>{
+  const buyEl=e.target.closest('.p-buy');
+  if(buyEl){
+    const key=buyEl.dataset.buy;
+    // 구매하기 버튼: 활성(off/soon 아님)일 때만 이동
+    if(!buyEl.classList.contains('off') && !buyEl.classList.contains('soon')
+       && SET_SOON.indexOf(key)<0){
+      window.open(SET_URL,'_blank','noopener');
+    }
+    return;
+  }
   const btn=e.target.closest('.preset');
   if(!btn) return;
   const key=btn.dataset.p;
-  if(activePreset===key){ activePreset=null; clearPresetUI(); calc(); return; }
+  if(activePreset===key){ activePreset=null; syncPresetHighlight(); updateBuyState(); calc(); return; }
   selectPreset(key);
 });
 
@@ -371,30 +383,46 @@ function selectPreset(key){
   document.querySelectorAll('#spacingChips .chip').forEach(c=>
     c.classList.toggle('on', parseFloat(c.dataset.sp)===pr.spacing));
   userPick=null;
-  document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('on', b.dataset.p===key));
-  renderPresetBuy(key, false);   // 활성
+  syncPresetHighlight();
+  updateBuyState();
   calc();
 }
 
-// disabled=false: 활성(클릭 가능), true: 비활성(회색, 클릭 불가)
-function renderPresetBuy(key, disabled){
-  const el=document.getElementById('presetBuy');
-  if(!el) return;
-  if(!key || !PRESETS[key]){ el.innerHTML=''; return; }
-  const pr=PRESETS[key];
-  const soon=SET_SOON.indexOf(key)>=0;
-  if(soon){
-    el.innerHTML=`<div class="preset-buy soon">${pr.label} · 준비중</div>`;
-  } else if(disabled){
-    el.innerHTML=`<div class="preset-buy off">${pr.label} · 값을 바꾸면 개별 구매</div>`;
-  } else {
-    el.innerHTML=`<a class="preset-buy" href="${SET_URL}" target="_blank" rel="noopener">🛒 ${pr.label} 바로 구매하기</a>`;
+// 선택된 프리셋에 .on (구매하기 노출), 나머지 제거
+function syncPresetHighlight(){
+  document.querySelectorAll('.preset').forEach(b=>
+    b.classList.toggle('on', b.dataset.p===lastPreset));
+}
+
+// 현재 입력값이 어떤 프리셋과 정확히 일치하는지 찾기
+function matchPreset(){
+  const nz=parseInt(document.getElementById('noz').value||0);
+  const ds=parseInt(document.getElementById('dist').value||0);
+  for(const [key,pr] of Object.entries(PRESETS)){
+    if(pr.noz===nz && pr.hoseLen===ds && pr.spacing===spacing) return key;
   }
+  return null;
+}
+
+// 구매하기 버튼 활성/비활성 갱신
+function updateBuyState(){
+  const matched=matchPreset();
+  // 값이 어떤 세트와 일치하면 그 세트를 선택 상태로, activePreset도 갱신
+  if(matched){
+    activePreset=matched; lastPreset=matched; syncPresetHighlight();
+  }
+  document.querySelectorAll('.p-buy').forEach(b=>{
+    const key=b.dataset.buy;
+    b.classList.remove('off','soon');
+    if(SET_SOON.indexOf(key)>=0){ b.textContent='준비중'; b.classList.add('soon'); }
+    else if(matched===key){ b.textContent='구매'; }        // 일치 → 활성
+    else { b.textContent='구매'; b.classList.add('off'); } // 불일치 → 비활성
+  });
 }
 
 function clearPresetUI(){
-  document.querySelectorAll('.preset').forEach(b=>b.classList.remove('on'));
-  renderPresetBuy(lastPreset, true);   // 버튼 유지하되 비활성
+  syncPresetHighlight();
+  updateBuyState();
 }
 
 function endPressure(dist, n, D, sp){
@@ -425,7 +453,7 @@ function nozzlePressures(dist, n, D, sp){
 }
 
 function exitPreset(){
-  if(activePreset){ activePreset=null; clearPresetUI(); }
+  activePreset=null;   // 값 직접 변경 → 커스텀 모드 (구매버튼 상태는 updateBuyState가 매칭 검사)
 }
 
 function bump(id,d){
@@ -553,6 +581,8 @@ function calc(){
   } else {
     renderParts(activeHose, noz, dist, best);
   }
+
+  updateBuyState();   // 값이 어떤 세트와 일치하는지 검사해 구매버튼 활성/비활성 갱신
 }
 
 function renderPresetParts(pr, activeHose){
