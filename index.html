@@ -121,8 +121,8 @@
   .pipe-line{position:absolute;top:20px;left:0;right:0;height:6px;border-radius:3px;
     background:linear-gradient(90deg,var(--water),var(--mist))}
   .tap{position:absolute;left:0;top:8px;font-size:20px}
-  .nozzles{position:absolute;top:26px;display:flex;justify-content:space-between;gap:2px}
-  .nozzles.single{justify-content:flex-end}
+  .nozzles{position:absolute;top:26px;display:flex}
+  .nz-cell{flex:1;display:flex;justify-content:flex-end}
   .nz{width:5px;height:12px;background:var(--leaf);border-radius:0 0 3px 3px}
   .dia-legend{display:flex;justify-content:space-between;font-size:11px;color:#6b8577;margin-top:8px;font-weight:600}
   footer{text-align:center;font-size:11px;color:#8aa595;padding:20px 10px;line-height:1.6}
@@ -508,8 +508,9 @@ function calc(){
   nzWrap.style.left=pct+'%';
   nzWrap.style.right='0';
   const show=Math.min(noz,24);
-  nzWrap.className='nozzles'+(show<=1?' single':'');
-  nzWrap.innerHTML=Array(show).fill('<div class="nz"></div>').join('');
+  nzWrap.className='nozzles';
+  // 각 노즐은 자기 1칸의 오른쪽 끝에 위치 (끝에서부터 채워짐, 맨앞은 비움)
+  nzWrap.innerHTML=Array(show).fill('<div class="nz-cell"><div class="nz"></div></div>').join('');
   document.getElementById('legMid').textContent=
     front>0?`공급 ${front}m →│ 분무 ${nozZone}m`:`분무 ${nozZone}m`;
   document.getElementById('diaLabel').textContent=
