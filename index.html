@@ -44,6 +44,17 @@
   }
   .stepper:active{background:var(--pale);transform:scale(.94)}
   .unit{font-size:14px;color:#6b8577;min-width:26px}
+  /* 슬라이더 */
+  .slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;
+    border-radius:3px;background:var(--pale);outline:none;margin-top:14px;
+    cursor:pointer}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:28px;height:28px;border-radius:50%;background:var(--leaf);
+    cursor:pointer;box-shadow:0 2px 6px rgba(31,92,61,.4);border:3px solid #fff}
+  .slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;
+    background:var(--leaf);cursor:pointer;box-shadow:0 2px 6px rgba(31,92,61,.4);
+    border:3px solid #fff}
+  .slider::-moz-range-track{height:6px;border-radius:3px;background:var(--pale)}
   .chips{display:flex;gap:8px}
   .chip{
     flex:1;padding:12px 4px;border:2px solid var(--line);background:#fff;
@@ -91,7 +102,8 @@
   .pipe-line{position:absolute;top:20px;left:0;right:0;height:6px;border-radius:3px;
     background:linear-gradient(90deg,var(--water),var(--mist))}
   .tap{position:absolute;left:0;top:8px;font-size:20px}
-  .nozzles{position:absolute;top:26px;display:flex;justify-content:space-between}
+  .nozzles{position:absolute;top:26px;display:flex;justify-content:space-between;gap:2px}
+  .nozzles.single{justify-content:flex-end}
   .nz{width:5px;height:12px;background:var(--leaf);border-radius:0 0 3px 3px}
   .dia-legend{display:flex;justify-content:space-between;font-size:11px;color:#6b8577;margin-top:8px;font-weight:600}
   footer{text-align:center;font-size:11px;color:#8aa595;padding:20px 10px;line-height:1.6}
@@ -127,6 +139,11 @@
   }
   .preset:active{transform:scale(.95)}
   .preset.on{border-color:var(--leaf);background:var(--leaf);color:#fff}
+  .preset-buy{display:block;text-align:center;margin-top:12px;padding:15px;
+    border-radius:12px;background:var(--leaf);color:#fff;font-size:16px;
+    font-weight:800;text-decoration:none;box-shadow:0 2px 8px rgba(31,92,61,.25)}
+  .preset-buy:active{opacity:.85}
+  .preset-buy.soon{background:#e8f1ec;color:#8aa595;box-shadow:none;cursor:default}
 </style>
 </head>
 <body>
@@ -150,6 +167,7 @@
       <button class="preset" data-p="25">25m</button>
       <button class="preset" data-p="50">50m</button>
     </div>
+    <div id="presetBuy"></div>
   </div>
 
   <div class="card">
@@ -163,6 +181,7 @@
         <div class="stepper" onclick="bump('noz',1)">＋</div>
         <span class="unit">개</span>
       </div>
+      <input class="slider" id="nozSlider" type="range" min="1" max="50" value="1">
     </div>
 
     <div class="field">
@@ -175,6 +194,7 @@
         <div class="stepper" onclick="bump('dist',1)">＋</div>
         <span class="unit">m</span>
       </div>
+      <input class="slider" id="distSlider" type="range" min="1" max="50" value="10">
     </div>
 
     <div class="field">
@@ -202,12 +222,8 @@
     </div>
   </div>
 
-  <div class="card result">
-    <div id="verdict" class="verdict ok">
-      <div class="big">계산 중…</div>
-    </div>
-
-    <div class="diagram">
+  <div class="card" style="padding:16px">
+    <div class="diagram" style="margin-bottom:0">
       <div class="dia-label" id="diaLabel">라인 구성</div>
       <div class="pipe">
         <div class="tap">🚰</div>
@@ -221,7 +237,7 @@
       </div>
     </div>
 
-    <div class="breakdown">
+    <div class="breakdown" style="margin-bottom:0;margin-top:14px">
       <div class="stat">
         <div class="k">앞쪽 공급</div>
         <div class="v" id="frontLen">–<span class="u">m</span></div>
@@ -234,6 +250,12 @@
         <div class="k">호스 총길이</div>
         <div class="v" id="totLen">–<span class="u">m</span></div>
       </div>
+    </div>
+  </div>
+
+  <div class="card result">
+    <div id="verdict" class="verdict ok">
+      <div class="big">계산 중…</div>
     </div>
 
     <div class="hose-title">호스별 끝단 압력 <span style="color:#8aa595;font-weight:500">· 눌러서 구성 변경</span></div>
@@ -291,7 +313,7 @@ const PRESETS={
            ['엔드캡 12mm',1,'개'],['어댑터 15A(암)-12mm',1,'개'],['테프론테이프',1,'개']]},
   '50': {label:'50미터 세트', hose:'16mm', hoseLen:50, noz:50, spacing:1,
     parts:[['저압노즐 (0.2~1.0mm)',50,'개'],['레듀샤티피팅 16-6-16mm',50,'개'],
-           ['엔드캡 16mm',1,'개'],['어댑터 15A(암)-16mm',1,'개'],['테프론테이프',1,'개']]},
+           ['어댑터 15A(암)-16mm',1,'개'],['테프론테이프',1,'개']]},
 };
 
 document.getElementById('presetGrid').addEventListener('click',e=>{
@@ -299,25 +321,47 @@ document.getElementById('presetGrid').addEventListener('click',e=>{
   if(!btn) return;
   const key=btn.dataset.p;
   if(activePreset===key){ activePreset=null; clearPresetUI(); calc(); return; }
+  selectPreset(key);
+});
+
+function selectPreset(key){
   activePreset=key;
   const pr=PRESETS[key];
-  // 입력값 채우기
   document.getElementById('noz').value=pr.noz;
   document.getElementById('dist').value=pr.hoseLen;
   spacing=pr.spacing;
   document.querySelectorAll('#spacingChips .chip').forEach(c=>
     c.classList.toggle('on', parseFloat(c.dataset.sp)===pr.spacing));
   userPick=null;
-  // 프리셋 버튼 하이라이트
   document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('on', b.dataset.p===key));
+  renderPresetBuy(key);
   calc();
-});
+}
+
+function renderPresetBuy(key){
+  const el=document.getElementById('presetBuy');
+  if(!el) return;
+  if(!key || !PRESETS[key]){ el.innerHTML=''; return; }
+  const pr=PRESETS[key];
+  const soon=SET_SOON.indexOf(key)>=0;
+  el.innerHTML=soon
+    ? `<div class="preset-buy soon">${pr.label} · 준비중</div>`
+    : `<a class="preset-buy" href="${SET_URL}" target="_blank" rel="noopener">🛒 ${pr.label} 바로 구매하기</a>`;
+}
 
 function clearPresetUI(){
   document.querySelectorAll('.preset').forEach(b=>b.classList.remove('on'));
+  const el=document.getElementById('presetBuy');
+  if(el) el.innerHTML='';
 }
 
 function endPressure(dist, n, D, sp){
+  const r=nozzlePressures(dist,n,D,sp);
+  return r?r.end:null;
+}
+
+// 첫 노즐(입구쪽)과 끝 노즐(끝단) 압력 둘 다 반환
+function nozzlePressures(dist, n, D, sp){
   const nozZone=n*sp;
   if(nozZone>dist+0.001) return null;
   const A=Math.PI*(D/2)**2;
@@ -328,12 +372,14 @@ function endPressure(dist, n, D, sp){
     const f=Re<2300?64/Re:0.316*Math.pow(Re,-0.25);
     P-=f*(1/D)*(RHO*v*v/2)*front;
   }
+  let first=null;
   for(let k=1;k<=n;k++){
     const Q=(n-k+1)*NF, v=Q/A, Re=RHO*v*D/MU;
     const f=Re<2300?64/Re:0.316*Math.pow(Re,-0.25);
     P-=f*(1/D)*(RHO*v*v/2)*sp;
+    if(k===1) first=P/98066.5;   // 첫 노즐 통과 후 압력
   }
-  return P/98066.5;
+  return {first:first, end:P/98066.5};
 }
 
 function exitPreset(){
@@ -380,6 +426,7 @@ function calc(){
     dist=Math.ceil(nozZone);
     document.getElementById('dist').value=dist;
   }
+  syncSliders();
 
   const front=+(dist-nozZone).toFixed(1);
   document.getElementById('frontLen').innerHTML=front+'<span class="u">m</span>';
@@ -391,6 +438,7 @@ function calc(){
   nzWrap.style.left=pct+'%';
   nzWrap.style.right='0';
   const show=Math.min(noz,24);
+  nzWrap.className='nozzles'+(show<=1?' single':'');
   nzWrap.innerHTML=Array(show).fill('<div class="nz"></div>').join('');
   document.getElementById('legMid').textContent=
     front>0?`공급 ${front}m →│ 분무 ${nozZone}m`:`분무 ${nozZone}m`;
@@ -405,12 +453,24 @@ function calc(){
     if(r.p!==null && r.p>=P_MIN){ best=r.name; break; }
   }
 
+  // 부품·카드에 쓸 호스: 사용자가 고른 게 있으면 그것, 없으면 추천(best)
+  let activeHose=best;
+  let isPicked=false;
+  if(userPick){
+    const upRow=rows.find(r=>r.name===userPick);
+    if(upRow && upRow.p!==null && upRow.p>=P_WEAK){ activeHose=userPick; isPicked=(userPick!==best); }
+  }
+
   const vEl=document.getElementById('verdict');
-  if(best){
-    const bp=rows.find(r=>r.name===best).p;
+  if(activeHose){
+    const aD=HOSES.find(h=>h.name===activeHose).D;
+    const pr=nozzlePressures(dist,noz,aD,spacing);
+    const endKg=pr.end;
+    const grade = endKg>=1.5 ? '여유 있음' : (endKg>=1.3 ? '정상 분무' : '분무 가능');
     vEl.className='verdict ok';
-    vEl.innerHTML=`<div class="big">✓ ${best} 호스 추천</div>
-      <div class="small">끝단 압력 ${bp.toFixed(1)}kg · 정상 분무</div>`;
+    const head = isPicked ? `${activeHose} 호스 (선택)` : `${activeHose} 호스 추천`;
+    vEl.innerHTML=`<div class="big">✓ ${head}</div>
+      <div class="small">첫 노즐 ${pr.first.toFixed(1)}kg → 끝 노즐 ${endKg.toFixed(1)}kg · ${grade}</div>`;
   } else {
     const p16=rows[rows.length-1].p;
     if(p16!==null && p16>=P_WEAK){
@@ -422,14 +482,6 @@ function calc(){
       vEl.innerHTML=`<div class="big">✕ 이 구성은 어려워요</div>
         <div class="small">노즐이 너무 많거나 라인이 너무 깁니다. 노즐을 줄이거나 간격을 넓혀보세요</div>`;
     }
-  }
-
-  // 부품에 쓸 호스: 사용자가 고른 게 있으면 그것, 없으면 추천(best)
-  // 단, 사용자가 고른 호스가 이번 계산에서 구성 불가(null)면 추천으로 폴백
-  let activeHose=best;
-  if(userPick){
-    const upRow=rows.find(r=>r.name===userPick);
-    if(upRow && upRow.p!==null && upRow.p>=P_WEAK) activeHose=userPick;
   }
 
   const hEl=document.getElementById('hoses');
@@ -608,9 +660,31 @@ function barCol(p){
   return '#b23b3b';
 }
 
+// 슬라이더 → 숫자입력 동기화
+function syncSliders(){
+  const nz=parseInt(document.getElementById('noz').value||1);
+  const ds=parseInt(document.getElementById('dist').value||1);
+  const nzS=document.getElementById('nozSlider');
+  const dsS=document.getElementById('distSlider');
+  // 50 초과 값은 슬라이더 최대(50)에 고정 표시
+  nzS.value=Math.min(50, Math.max(1, nz));
+  dsS.value=Math.min(50, Math.max(1, ds));
+}
+
+document.getElementById('nozSlider').addEventListener('input',e=>{
+  exitPreset();
+  document.getElementById('noz').value=e.target.value;
+  calc();
+});
+document.getElementById('distSlider').addEventListener('input',e=>{
+  exitPreset();
+  document.getElementById('dist').value=e.target.value;
+  calc();
+});
+
 document.getElementById('dist').addEventListener('input',()=>{exitPreset();calc();});
 document.getElementById('noz').addEventListener('input',()=>{exitPreset();calc();});
-calc();
+selectPreset('10');   // 기본값: 10미터 세트 선택 상태로 시작
 </script>
 </body>
 </html>
